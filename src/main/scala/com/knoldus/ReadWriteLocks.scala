@@ -1,16 +1,15 @@
 package com.knoldus
 
+import java.util.ConcurrentModificationException
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantReadWriteLock
-import scala.::
-import scala.collection.mutable.ListBuffer
 
 
 object ReadWriteLocks extends App {
 
-  val readWriteLocks = new ReadWriteLocks
+  private val readWriteLocks = new ReadWriteLocks
 
-  val executors= Executors.newFixedThreadPool(2)
+  private val executors = Executors.newFixedThreadPool(2)
   executors.execute(readWriteLocks.firstThread)
   executors.execute(readWriteLocks.fourthThread)
   executors.execute(readWriteLocks.secondThread)
@@ -21,28 +20,34 @@ object ReadWriteLocks extends App {
 }
 
 class ReadWriteLocks {
-  val lock = new ReentrantReadWriteLock
-  var list:List[Int] =  List().empty
+  private val lock = new ReentrantReadWriteLock
+  private var list: List[Int] = List().empty
 
   private def writingOperation(writingValue: Int): Unit = {
     lock.writeLock().lock()
-    try{
-      println(Thread.currentThread().getName+ " => writing on the list.")
-       list = list :+ writingValue
+    try {
+      println(Thread.currentThread().getName + " => writing on the list.")
+      list = list :+ writingValue
       Thread.sleep(3000)
       println(s"list = $list at the time of writing.")
+    } catch {
+      case exception: NullPointerException => println(exception.getMessage)
+      case exception: InterruptedException => println(exception.getMessage)
     }
     finally {
       lock.writeLock().unlock()
     }
   }
 
-  private def readingOperation : List[Int]  = {
+  private def readingOperation: List[Int] = {
     lock.readLock().lock()
-    try{
-      println(Thread.currentThread().getName+ " reading the list.")
+    try {
+      println(Thread.currentThread().getName + " reading the list.")
       list
-    } finally {
+    } catch {
+      case e: ConcurrentModificationException => list
+    }
+    finally {
       lock.readLock().unlock()
     }
   }
@@ -52,7 +57,7 @@ class ReadWriteLocks {
       writingOperation(3)
     }
   }
-val secondThread: Runnable = new Runnable {
+  val secondThread: Runnable = new Runnable {
     override def run(): Unit = {
       writingOperation(2)
     }
@@ -63,7 +68,7 @@ val secondThread: Runnable = new Runnable {
       writingOperation(6)
     }
   }
-val fourthThread: Runnable = new Runnable {
+  val fourthThread: Runnable = new Runnable {
     override def run(): Unit = {
       Thread.sleep(3000)
       println(s"list = $readingOperation")
