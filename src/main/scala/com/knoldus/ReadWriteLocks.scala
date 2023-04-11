@@ -1,15 +1,16 @@
 package com.knoldus
 
 import java.util.ConcurrentModificationException
-
-import java.util.concurrent.locks.ReentrantReadWriteLock
+import java.util.concurrent.Semaphore
 
 class ReadWriteLocks {
-  private val lock = new ReentrantReadWriteLock
-  private var list: List[Int] = List().empty
+  private val writeSemaphore = new Semaphore(1)
+  private val readSemaphore = new Semaphore(1)
+
+  private var list: List[Int] = List.empty
 
   private def writingOperation(writingValue: Int): Unit = {
-    lock.writeLock().lock()
+    writeSemaphore.acquire()
     try {
       println(Thread.currentThread().getName + " => writing on the list.")
       list = list :+ writingValue
@@ -18,22 +19,20 @@ class ReadWriteLocks {
     } catch {
       case exception: NullPointerException => println(exception.getMessage)
       case exception: InterruptedException => println(exception.getMessage)
-    }
-    finally {
-      lock.writeLock().unlock()
+    } finally {
+      writeSemaphore.release()
     }
   }
 
   private def readingOperation: List[Int] = {
-    lock.readLock().lock()
+    readSemaphore.acquire()
     try {
       println(Thread.currentThread().getName + " reading the list.")
       list
     } catch {
       case e: ConcurrentModificationException => list
-    }
-    finally {
-      lock.readLock().unlock()
+    } finally {
+      readSemaphore.release()
     }
   }
 
